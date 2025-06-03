@@ -17,7 +17,7 @@ CRUD_SERVICE_URL = f"{CRUD_URL}:{CRUD_PORT}/files"
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 
-@app.post("/upload", status_code=201, responses={
+@app.post("/upload2", status_code=201, responses={
     201: {
         "description": "Изображение обработано и данные отправлены",
         "content": {
