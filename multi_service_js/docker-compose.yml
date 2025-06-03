@@ -1,0 +1,40 @@
+services:
+
+  crud:
+    build:
+      context: ./crud
+      dockerfile: Dockerfile
+    command: npm run start
+    container_name: crud
+    restart: always
+    networks:
+      - programmator_network
+    environment:
+      PORT: 3011
+    ports:
+      - '3011:3011'
+    volumes:
+      - ./crud/files:/root/crud/files
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: npm run start
+    container_name: backend
+    environment:
+      PORT: 4001
+      CRUD_URL: http://crud
+      CRUD_PORT: 3011
+      
+    restart: always
+    networks:
+      - programmator_network
+    ports:
+      - '4001:4001'
+
+
+
+networks:
+  programmator_network:
+    name: programmator_network

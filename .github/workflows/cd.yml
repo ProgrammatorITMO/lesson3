@@ -1,0 +1,58 @@
+name: Деплой на VPS
+
+on:
+  push:
+    branches:
+      - main
+
+      
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Получение кода из репозитория
+      uses: actions/checkout@v4
+
+    - name: Настройка SSH-ключа
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_KEY }}
+
+    - name: Добавление VPS в known_hosts
+      run: |
+        ssh-keyscan -H ${{ secrets.PROD_SERVER }} >> ~/.ssh/known_hosts
+
+    - name: Добавление GitHub в known_hosts на сервере
+      run: |
+        ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.PROD_SERVER }} 'mkdir -p ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts'
+      
+
+    - name: Проверка существования директории на VPS
+      run: |
+        ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.PROD_SERVER }} 'if [ -d /root/lesson3 ]; then echo "Директория существует"; else echo "Директория не существует"; fi'
+
+    - name: Остановка и очистка Docker перед удалением старой директории
+      run: |
+        ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.PROD_SERVER }} '
+          if [ -d /root/lesson3 ]; then
+            cd /root/lesson3/multi_service_python &&
+            docker compose down &&
+            docker system prune -f &&
+            cd /root &&
+            rm -rf /root/lesson3 &&
+            echo "Остановлены контейнеры, Docker очищен, старая директория удалена";
+          fi
+        '
+
+    - name: Создание новой директории
+      run: |
+        ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.PROD_SERVER }} 'mkdir -p /root/lesson3 && echo "Создана директория /root/lesson3"'
+
+    - name: Клонирование репозитория на VPS с использованием ssh-agent
+      run: |
+        ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.PROD_SERVER }} 'ssh-agent bash -c "ssh-add ~/.ssh/id_rsa_remote && git clone git@github.com:ProgrammatorITMO/lesson3.git /root/lesson3"'
+
+    - name: Запуск server_start.sh на VPS
+      run: |
+        ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.PROD_SERVER }} 'cd /root/lesson3/multi_service_python && bash server_start.sh'
